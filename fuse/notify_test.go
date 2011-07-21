@@ -119,3 +119,24 @@ func TestInodeNotifyRemoval(t *testing.T) {
 		t.Error("should have been removed", fi)
 	}
 }
+
+func TestEntryNotify(t *testing.T) {
+	test := NewNotifyTest()
+	defer test.Clean()
+
+	fs := test.fs
+	dir := test.dir
+	fs.exist = true
+	
+        fs.size = 42
+        fi, err := os.Lstat(dir + "/dir/file")
+        CheckSuccess(err)
+        if !fi.IsRegular() || fi.Size != 42 {
+                t.Error(fi)
+        }
+
+        code := test.connector.EntryNotify("dir", "file")
+        if !code.Ok() {
+                t.Error(code)
+        }
+}

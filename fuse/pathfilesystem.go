@@ -654,3 +654,14 @@ func (me *FileSystemConnector) FileNotify(path string, off int64, length int64) 
 	}
 	return me.fsInit.InodeNotify(&out)
 }
+
+
+func (me *FileSystemConnector) EntryNotify(path string, name string) Status {
+	node := me.findInode(path)
+	if node == nil {
+		return ENOENT
+	}
+
+	return me.fsInit.EntryNotify(node.NodeId, []byte(name))
+}
+

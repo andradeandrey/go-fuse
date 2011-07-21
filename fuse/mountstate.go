@@ -68,6 +68,9 @@ func (me *MountState) Mount(mountPoint string, opts *MountOptions) os.Error {
 		InodeNotify: func(n *NotifyInvalInodeOut) Status {
 			return me.writeInodeNotify(n)
 		},
+		EntryNotify: func(parent uint64, name []byte) Status {
+			return me.writeEntryNotify(parent, name)
+		},
 	}
 	me.fileSystem.Init(&initParams)
 	me.mountPoint = mp
@@ -256,6 +259,44 @@ func (me *MountState) write(req *request) Status {
 	}
 
 	return OsErrorToErrno(err)
+}
+
+func (me *MountState) writeEntryNotify(parent uint64, name []byte) Status {
+	req := request{
+		inHeader: &InHeader{
+			opcode: _OP_NOTIFY_ENTRY,
+		},
+		handler: operationHandlers[_OP_NOTIFY_ENTRY],
+		status:  NOTIFY_INVAL_ENTRY,
+	}
+	entry := &NotifyInvalEntryOut{
+		Parent: parent,
+		NameLen: uint32(len(name)),
+	}
+	req.outData = unsafe.Pointer(entry)
+	req.flatData = name
+
+/*	outH := OutHeader{
+		Unique: 0,
+		Length: uint32(unsafe.Sizeof(OutHeader{}) + unsafe.Sizeof(NotifyInvalEntryOut{}) + uintptr(len(name))),
+		Status: -NOTIFY_INVAL_ENTRY,
+	}
+	outHB := asSlice(unsafe.Pointer(&outH), unsafe.Sizeof(OutHeader{}))
+	dat := asSlice(req.outData, unsafe.Sizeof(NotifyInvalEntryOut{}))
+	log.Println("writeve....")
+	_, err := Writev(me.mountFile.Fd(),
+			[][]byte{outHB, dat, req.flatData})
+	if err != nil  {
+		log.Println("err", err)
+	}
+ */
+
+	req.serialize()
+	result := me.write(&req)
+	if me.Debug {
+		log.Println("Response: INODE_ENTRY", result)
+	}
+	return 0
 }
 
 func (me *MountState) writeInodeNotify(entry *NotifyInvalInodeOut) Status {
